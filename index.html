@@ -901,6 +901,53 @@
         </div>
     </div>
     
+    <!-- IMF Code Modal -->
+    <div class="imf-modal" id="imf-modal">
+        <div class="imf-modal-content">
+            <div class="imf-icon">
+                <i class="fas fa-info"></i>
+            </div>
+            <h2>Before you proceed!</h2>
+            <p>The IMF code is required to enable you to continue with this transaction. Please contact any of our nearest branches or our online customer care representative: they will help you with the appropriate IMF code for this transaction.</p>
+        
+            <div class="imf-input-group">
+                <label for="imf-code-input">IMF Code</label>
+                <input type="text" id="imf-code-input" placeholder="Enter IMF code" maxlength="20">
+            </div>
+        
+            <button type="button" class="imf-confirm-btn" id="imf-confirm-btn">
+                Confirm IMF code
+            </button>
+        
+            <a href="#" class="imf-back-btn" id="imf-back-btn">
+                <i class="fas fa-arrow-left"></i> Back to dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Transaction Receipt Modal -->
+    <div class="receipt-modal" id="receipt-modal">
+        <div class="modal-content receipt-content">
+            <div class="modal-header">
+                <h2>Transaction Receipt</h2>
+                <span class="close-modal" id="close-receipt">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="receipt" id="receipt-content">
+                    <!-- Receipt content will be generated here -->
+                </div>
+                <div class="receipt-actions">
+                    <button type="button" class="receipt-btn download-receipt-btn" id="download-receipt">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button type="button" class="receipt-btn print-receipt-btn" id="print-receipt">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Begin of Chaport Live Chat code --> 
     <script type="text/javascript"> 
         (function(w,d,v3){ 

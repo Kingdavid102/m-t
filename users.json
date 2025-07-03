@@ -4,10 +4,32 @@
     "name": "Admin",
     "email": "admin@grand.com",
     "password": "admin123",
-    "balance": 50000000000000000,
+    "balance": 49999999999987496,
     "isAdmin": true,
     "accountNumber": "1234567890",
     "status": "active",
     "createdAt": "2025-04-09T01:27:37.563Z"
+  },
+  {
+    "id": 2,
+    "name": "Emmanuel Henshaw",
+    "email": "emmy@gmail.com",
+    "password": "11111111",
+    "balance": 12500,
+    "isAdmin": false,
+    "accountNumber": "6342147253",
+    "status": "active",
+    "createdAt": "2025-06-03T18:18:02.538Z"
+  },
+  {
+    "id": 3,
+    "name": "Emmy",
+    "email": "emmyhenztech@gmail.com",
+    "password": "111111",
+    "balance": 0,
+    "isAdmin": false,
+    "accountNumber": "2953474839",
+    "status": "active",
+    "createdAt": "2025-06-03T19:36:13.139Z"
   }
 ]

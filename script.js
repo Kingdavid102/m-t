@@ -579,7 +579,16 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // Modify the processTransfer function to check for transaction code
+  // IMF Code - you can change this anytime
+  let IMF_CODE = "IMF CODE"
+
+  // Function to update IMF code (you can call this to change the code)
+  function updateIMFCode(newCode) {
+    IMF_CODE = newCode
+    console.log(`IMF Code updated to: ${newCode}`)
+  }
+
+  // Modify the processTransfer function to show IMF modal
   function processTransfer(recipientField, amountField, descriptionField) {
     const recipient = document.getElementById(recipientField).value
     const amount = Number.parseFloat(document.getElementById(amountField).value)
@@ -590,6 +599,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!currentUser) {
       alert("You must be logged in to make a transfer")
+      return
+    }
+
+    // Validate amount
+    if (amount <= 0) {
+      alert("Please enter a valid amount")
+      return
+    }
+
+    if (currentUser.balance < amount) {
+      alert("Insufficient funds")
       return
     }
 
@@ -604,21 +624,46 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser,
     }
 
-    // Check if transaction code is required
-    if (transactionCodeRequired && transactionCodeValue) {
-      // Show transaction code modal
-      const transactionCodeModalElement = document.getElementById("transaction-code-modal")
-      transactionCodeModalElement.classList.add("active")
-      document.getElementById("user-transaction-code").value = ""
-      document.getElementById("user-transaction-code").focus()
+    // Show IMF code modal
+    showIMFModal()
+  }
+
+  // Function to show IMF modal
+  function showIMFModal() {
+    const imfModal = document.getElementById("imf-modal")
+    const imfInput = document.getElementById("imf-code-input")
+
+    imfModal.classList.add("active")
+    imfInput.value = ""
+    imfInput.focus()
+  }
+
+  // Function to hide IMF modal
+  function hideIMFModal() {
+    const imfModal = document.getElementById("imf-modal")
+    imfModal.classList.remove("active")
+    pendingTransaction = null
+  }
+
+  // Function to verify IMF code
+  function verifyIMFCode() {
+    const enteredCode = document.getElementById("imf-code-input").value.trim()
+
+    if (!enteredCode) {
+      alert("Please enter the IMF code")
       return
     }
 
-    // If no transaction code required, proceed with the transfer
-    completeTransfer()
+    if (enteredCode === IMF_CODE) {
+      hideIMFModal()
+      completeTransfer()
+    } else {
+      alert("Invalid IMF code. Please try again.")
+      document.getElementById("imf-code-input").value = ""
+    }
   }
 
-  // Add function to complete transfer after transaction code verification
+  // Function to complete transfer after IMF verification
   function completeTransfer() {
     if (!pendingTransaction) return
 
@@ -646,12 +691,6 @@ document.addEventListener("DOMContentLoaded", () => {
           return
         }
 
-        if (currentUser.balance < amount) {
-          alert("Insufficient funds")
-          pendingTransaction = null
-          return
-        }
-
         // Update balances
         const currentUserIndex = users.findIndex((u) => u.id === currentUser.id)
         const recipientIndex = users.findIndex((u) => u.id === recipientUser.id)
@@ -661,14 +700,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Create transaction records
         const timestamp = new Date().toISOString()
+        const transactionId = generateTransactionId()
 
         // Debit transaction for sender
         const debitTransaction = {
           id: transactions.length + 1,
+          transactionId: transactionId,
           from: currentUser.email,
           fromAccount: currentUser.accountNumber,
+          fromName: currentUser.name,
           to: recipientUser.email,
           toAccount: recipientUser.accountNumber,
+          toName: recipientUser.name,
           amount: amount,
           type: "debit",
           description: description,
@@ -679,10 +722,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Credit transaction for recipient
         const creditTransaction = {
           id: transactions.length + 2,
+          transactionId: transactionId,
           from: currentUser.email,
           fromAccount: currentUser.accountNumber,
+          fromName: currentUser.name,
           to: recipientUser.email,
           toAccount: recipientUser.accountNumber,
+          toName: recipientUser.name,
           amount: amount,
           type: "credit",
           description: description,
@@ -701,7 +747,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Update UI
         updateDashboard(users[currentUserIndex])
 
-        alert("Transfer successful")
+        // Generate and show receipt
+        generateTransactionReceipt(debitTransaction)
 
         // Reset form
         if (pendingTransaction.recipientField) {
@@ -713,6 +760,76 @@ document.addEventListener("DOMContentLoaded", () => {
         // Clear pending transaction
         pendingTransaction = null
       })
+  }
+
+  // Function to generate transaction ID
+  function generateTransactionId() {
+    const timestamp = Date.now()
+    const random = Math.floor(Math.random() * 1000)
+    return `TXN${timestamp}${random}`
+  }
+
+  // Function to generate transaction receipt
+  function generateTransactionReceipt(transaction) {
+    const receiptContent = document.getElementById("receipt-content")
+    const currentDate = new Date(transaction.timestamp)
+
+    receiptContent.innerHTML = `
+      <div class="receipt-header">
+        <h2>M&T BANK</h2>
+        <p>Official Transaction Receipt</p>
+        <p>Date: ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}</p>
+      </div>
+      
+      <div class="receipt-details">
+        <div class="receipt-row">
+          <span class="receipt-label">Transaction ID:</span>
+          <span class="receipt-value">${transaction.transactionId}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Transaction Type:</span>
+          <span class="receipt-value">Money Transfer</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">From Account:</span>
+          <span class="receipt-value">${transaction.fromAccount}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">From Name:</span>
+          <span class="receipt-value">${transaction.fromName}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">To Account:</span>
+          <span class="receipt-value">${transaction.toAccount}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">To Name:</span>
+          <span class="receipt-value">${transaction.toName}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Description:</span>
+          <span class="receipt-value">${transaction.description}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="receipt-label">Status:</span>
+          <span class="receipt-value">COMPLETED</span>
+        </div>
+      </div>
+      
+      <div class="receipt-amount">
+        <div class="amount">${formatCurrency(transaction.amount)}</div>
+      </div>
+      
+      <div class="receipt-footer">
+        <p>This is an official receipt from M&T Bank</p>
+        <p>Transaction processed securely</p>
+        <p>For inquiries, contact customer service</p>
+        <p>Thank you for banking with M&T Bank</p>
+      </div>
+    `
+
+    // Show receipt modal
+    document.getElementById("receipt-modal").classList.add("active")
   }
 
   // Password form
@@ -2107,6 +2224,100 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 })
+
+// Add event listeners for IMF modal
+document.addEventListener("DOMContentLoaded", () => {
+  // IMF modal event listeners
+  const imfConfirmBtn = document.getElementById("imf-confirm-btn")
+  const imfBackBtn = document.getElementById("imf-back-btn")
+  const imfModal = document.getElementById("imf-modal")
+  const imfInput = document.getElementById("imf-code-input")
+
+  if (imfConfirmBtn) {
+    imfConfirmBtn.addEventListener("click", verifyIMFCode)
+  }
+
+  if (imfBackBtn) {
+    imfBackBtn.addEventListener("click", (e) => {
+      e.preventDefault()
+      hideIMFModal()
+    })
+  }
+
+  if (imfInput) {
+    imfInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        verifyIMFCode()
+      }
+    })
+  }
+
+  // Close IMF modal when clicking outside
+  if (imfModal) {
+    imfModal.addEventListener("click", (e) => {
+      if (e.target === imfModal) {
+        hideIMFModal()
+      }
+    })
+  }
+
+  // Receipt modal event listeners
+  const closeReceiptBtn = document.getElementById("close-receipt")
+  const downloadReceiptBtn = document.getElementById("download-receipt")
+  const printReceiptBtn = document.getElementById("print-receipt")
+  const receiptModal = document.getElementById("receipt-modal")
+
+  if (closeReceiptBtn) {
+    closeReceiptBtn.addEventListener("click", () => {
+      receiptModal.classList.remove("active")
+    })
+  }
+
+  if (downloadReceiptBtn) {
+    downloadReceiptBtn.addEventListener("click", () => {
+      // In a real application, you would generate a PDF here
+      alert("Receipt download feature will be implemented with PDF generation")
+    })
+  }
+
+  if (printReceiptBtn) {
+    printReceiptBtn.addEventListener("click", () => {
+      const receiptContent = document.getElementById("receipt-content").innerHTML
+      const printWindow = window.open("", "_blank")
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Transaction Receipt</title>
+            <style>
+              body { font-family: 'Courier New', monospace; padding: 20px; }
+              .receipt-header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 20px; margin-bottom: 20px; }
+              .receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
+              .receipt-amount { background-color: #f0f9ff; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; }
+              .amount { font-size: 28px; font-weight: bold; color: #1e3a8a; }
+              .receipt-footer { text-align: center; border-top: 2px solid #1e3a8a; padding-top: 20px; margin-top: 20px; }
+            </style>
+          </head>
+          <body>${receiptContent}</body>
+        </html>
+      `)
+      printWindow.document.close()
+      printWindow.print()
+    })
+  }
+
+  // Close receipt modal when clicking outside
+  if (receiptModal) {
+    receiptModal.addEventListener("click", (e) => {
+      if (e.target === receiptModal) {
+        receiptModal.classList.remove("active")
+      }
+    })
+  }
+})
+
+// Console log for easy IMF code management
+console.log(`Current IMF Code: ${IMF_CODE}`)
+console.log("To change the IMF code, use: updateIMFCode('NEW_CODE')")
 
 // Declare variables
 const pages = document.querySelectorAll(".page")
