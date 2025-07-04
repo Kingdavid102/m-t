@@ -60,11 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const applyCardBtn = document.querySelector(".apply-card-btn")
   const makeDepositBtn = document.querySelector(".make-deposit-btn")
 
-  // Add transaction code related variables
-  let transactionCodeRequired = false
-  let transactionCodeValue = ""
-  let pendingTransaction = null
-
   // Initialize data from server or create default if not exists
   let users = []
   let transactions = []
@@ -75,19 +70,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Modify the fetchData function to ensure it updates the current user session after loading data
   fetchData = () => {
-    // Try to get data from server first
-    Promise.all([
+    return Promise.all([
       fetch("/api/users")
         .then((res) => res.json())
         .catch(() => null),
       fetch("/api/transactions")
         .then((res) => res.json())
         .catch(() => null),
-      fetch("/api/settings")
-        .then((res) => res.json())
-        .catch(() => null),
     ])
-      .then(([serverUsers, serverTransactions, serverSettings]) => {
+      .then(([serverUsers, serverTransactions]) => {
         if (serverUsers) {
           users = serverUsers
           localStorage.setItem("users", JSON.stringify(users))
@@ -138,28 +129,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        // Load transaction code settings
-        if (serverSettings) {
-          transactionCodeRequired = serverSettings.transactionCodeRequired || false
-          transactionCodeValue = serverSettings.transactionCodeValue || ""
-          localStorage.setItem("settings", JSON.stringify(serverSettings))
-        } else {
-          // Fallback to localStorage
-          const storedSettings = localStorage.getItem("settings")
-          if (storedSettings) {
-            const settings = JSON.parse(storedSettings)
-            transactionCodeRequired = settings.transactionCodeRequired || false
-            transactionCodeValue = settings.transactionCodeValue || ""
-          } else {
-            // Default settings
-            const defaultSettings = {
-              transactionCodeRequired: false,
-              transactionCodeValue: "",
-            }
-            localStorage.setItem("settings", JSON.stringify(defaultSettings))
-          }
-        }
-
         updateUI()
       })
       .catch((error) => {
@@ -168,7 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Fallback to localStorage if server fetch fails
         const storedUsers = localStorage.getItem("users")
         const storedTransactions = localStorage.getItem("transactions")
-        const storedSettings = localStorage.getItem("settings")
 
         if (storedUsers) {
           users = JSON.parse(storedUsers)
@@ -197,19 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("transactions", JSON.stringify(transactions))
         }
 
-        if (storedSettings) {
-          const settings = JSON.parse(storedSettings)
-          transactionCodeRequired = settings.transactionCodeRequired || false
-          transactionCodeValue = settings.transactionCodeValue || ""
-        } else {
-          // Default settings
-          const defaultSettings = {
-            transactionCodeRequired: false,
-            transactionCodeValue: "",
-          }
-          localStorage.setItem("settings", JSON.stringify(defaultSettings))
-        }
-
         updateUI()
       })
   }
@@ -235,25 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       body: JSON.stringify(transactions),
     }).catch((err) => console.error("Error saving transactions to server:", err))
-  }
-
-  // Add a function to save settings
-  function saveSettings() {
-    const settings = {
-      transactionCodeRequired,
-      transactionCodeValue,
-    }
-
-    localStorage.setItem("settings", JSON.stringify(settings))
-
-    // Also save to server
-    fetch("/api/settings/save", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(settings),
-    }).catch((err) => console.error("Error saving settings to server:", err))
   }
 
   // Update UI based on current data
@@ -429,6 +365,10 @@ document.addEventListener("DOMContentLoaded", () => {
           return response.json()
         })
         .then((user) => {
+          // Add the new user to local users array
+          users.push(user)
+          localStorage.setItem("users", JSON.stringify(users))
+
           alert("Registration successful! Please login.")
           registerContainer.style.display = "none"
           loginContainer.style.display = "flex"
@@ -522,10 +462,37 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
+  function showAdminPage(pageId) {
+    adminPages.forEach((page) => {
+      page.classList.remove("active")
+    })
+
+    const selectedPage = document.getElementById(pageId)
+    if (selectedPage) {
+      selectedPage.classList.add("active")
+    }
+
+    // Update navigation
+    adminSidebarMenuItems.forEach((item) => {
+      if (item.getAttribute("data-admin-page") === pageId.replace("-page", "")) {
+        item.classList.add("active")
+      } else {
+        item.classList.remove("active")
+      }
+    })
+  }
+
   sidebarMenuItems.forEach((item) => {
     item.addEventListener("click", () => {
       const pageId = item.getAttribute("data-page") + "-page"
       showPage(pageId)
+    })
+  })
+
+  adminSidebarMenuItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const pageId = item.getAttribute("data-admin-page") + "-page"
+      showAdminPage(pageId)
     })
   })
 
@@ -579,16 +546,81 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // IMF Code - you can change this anytime
-  let IMF_CODE = "IMF CODE"
+  // Global variables for IMF verification
+  let pendingTransferData = null
+  let pendingAdminFundData = null
 
-  // Function to update IMF code (you can call this to change the code)
-  function updateIMFCode(newCode) {
-    IMF_CODE = newCode
-    console.log(`IMF Code updated to: ${newCode}`)
+  // IMF verification modal elements
+  const imfModal = document.getElementById("imf-verification-modal")
+  const imfCodeInput = document.getElementById("imf-code-input")
+  const confirmImfBtn = document.getElementById("confirm-imf-btn")
+  const backDashboardBtn = document.getElementById("back-dashboard-btn")
+
+  // Show IMF verification modal
+  function showImfModal() {
+    imfModal.classList.add("active")
+    imfCodeInput.value = ""
+    imfCodeInput.focus()
   }
 
-  // Modify the processTransfer function to show IMF modal
+  // Hide IMF verification modal
+  function hideImfModal() {
+    imfModal.classList.remove("active")
+    // Don't clear pending data here - let the execution functions handle it
+  }
+
+  // IMF verification event listeners
+  if (confirmImfBtn) {
+    confirmImfBtn.addEventListener("click", () => {
+      const enteredCode = imfCodeInput.value.trim().toUpperCase()
+
+      if (enteredCode === "IMF CODE") {
+        // Process pending transfer immediately
+        if (pendingTransferData) {
+          executeTransfer(pendingTransferData)
+          hideImfModal()
+          // Clear pending data
+          pendingTransferData = null
+        }
+
+        // Process pending admin funding
+        if (pendingAdminFundData) {
+          executeAdminFunding(pendingAdminFundData)
+          hideImfModal()
+          // Clear pending data
+          pendingAdminFundData = null
+        }
+      } else {
+        alert("Invalid IMF code. Please enter the correct code to proceed.")
+        imfCodeInput.focus()
+      }
+    })
+  }
+
+  if (backDashboardBtn) {
+    backDashboardBtn.addEventListener("click", () => {
+      hideImfModal()
+      showPage("dashboard-page")
+    })
+  }
+
+  // Close modal when clicking outside
+  imfModal.addEventListener("click", (e) => {
+    if (e.target === imfModal) {
+      hideImfModal()
+    }
+  })
+
+  // Allow Enter key to confirm IMF code
+  if (imfCodeInput) {
+    imfCodeInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        confirmImfBtn.click()
+      }
+    })
+  }
+
+  // Updated processTransfer function with IMF verification
   function processTransfer(recipientField, amountField, descriptionField) {
     const recipient = document.getElementById(recipientField).value
     const amount = Number.parseFloat(document.getElementById(amountField).value)
@@ -602,9 +634,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return
     }
 
-    // Validate amount
-    if (amount <= 0) {
-      alert("Please enter a valid amount")
+    if (!recipient || !amount || amount <= 0) {
+      alert("Please fill in all required fields with valid values")
       return
     }
 
@@ -613,326 +644,230 @@ document.addEventListener("DOMContentLoaded", () => {
       return
     }
 
-    // Store pending transaction details
-    pendingTransaction = {
-      recipientField,
-      amountField,
-      descriptionField,
+    // Store transfer data for after IMF verification
+    pendingTransferData = {
       recipient,
       amount,
       description,
-      currentUser,
+      recipientField,
+      amountField,
+      descriptionField,
     }
 
-    // Show IMF code modal
-    showIMFModal()
+    // Show IMF verification modal
+    showImfModal()
   }
 
-  // Function to show IMF modal
-  function showIMFModal() {
-    const imfModal = document.getElementById("imf-modal")
-    const imfInput = document.getElementById("imf-code-input")
+  // Execute transfer after IMF verification
+  function executeTransfer(transferData) {
+    const { recipient, amount, description, recipientField, amountField, descriptionField } = transferData
 
-    imfModal.classList.add("active")
-    imfInput.value = ""
-    imfInput.focus()
-  }
+    // Get current user
+    const currentUser = getCurrentUser()
 
-  // Function to hide IMF modal
-  function hideIMFModal() {
-    const imfModal = document.getElementById("imf-modal")
-    imfModal.classList.remove("active")
-    pendingTransaction = null
-  }
+    // Find recipient (by email or account number) from current users array
+    const recipientUser = users.find((u) => u.email === recipient || u.accountNumber === recipient)
 
-  // Function to verify IMF code
-  function verifyIMFCode() {
-    const enteredCode = document.getElementById("imf-code-input").value.trim()
-
-    if (!enteredCode) {
-      alert("Please enter the IMF code")
+    if (!recipientUser) {
+      alert("Recipient not found")
       return
     }
 
-    if (enteredCode === IMF_CODE) {
-      hideIMFModal()
-      completeTransfer()
-    } else {
-      alert("Invalid IMF code. Please try again.")
-      document.getElementById("imf-code-input").value = ""
+    if (currentUser.balance < amount) {
+      alert("Insufficient funds")
+      return
+    }
+
+    // Update balances
+    const currentUserIndex = users.findIndex((u) => u.id === currentUser.id)
+    const recipientIndex = users.findIndex((u) => u.id === recipientUser.id)
+
+    users[currentUserIndex].balance -= amount
+    users[recipientIndex].balance += amount
+
+    // Create transaction records
+    const timestamp = new Date().toISOString()
+    const referenceNumber = `TRF-${Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, "0")}`
+
+    // Debit transaction for sender
+    const debitTransaction = {
+      id: transactions.length + 1,
+      from: currentUser.email,
+      fromAccount: currentUser.accountNumber,
+      to: recipientUser.email,
+      toAccount: recipientUser.accountNumber,
+      amount: amount,
+      type: "debit",
+      description: description,
+      timestamp: timestamp,
+      status: "completed",
+      reference: referenceNumber,
+    }
+
+    // Credit transaction for recipient
+    const creditTransaction = {
+      id: transactions.length + 2,
+      from: currentUser.email,
+      fromAccount: currentUser.accountNumber,
+      to: recipientUser.email,
+      toAccount: recipientUser.accountNumber,
+      amount: amount,
+      type: "credit",
+      description: description,
+      timestamp: timestamp,
+      status: "completed",
+      reference: referenceNumber,
+    }
+
+    transactions.push(debitTransaction, creditTransaction)
+
+    // Update session storage
+    sessionStorage.setItem("currentUser", JSON.stringify(users[currentUserIndex]))
+
+    // Save data
+    saveData()
+
+    // Update UI immediately
+    updateDashboard(users[currentUserIndex])
+
+    // Show receipt modal with proper details
+    showReceiptModal({
+      recipient: recipientUser.name,
+      recipientAccount: recipientUser.accountNumber,
+      amount: amount,
+      description: description || "Transfer",
+      date: new Date().toLocaleString(),
+      reference: referenceNumber,
+    })
+
+    // Clear form
+    document.getElementById(recipientField).value = ""
+    document.getElementById(amountField).value = ""
+    document.getElementById(descriptionField).value = ""
+  }
+
+  // Add this new function to ensure the receipt modal is displayed correctly
+  function displayReceiptModal(data) {
+    console.log("Displaying receipt modal with data:", data)
+
+    const receiptModal = document.getElementById("receipt-modal")
+    const receiptAmount = document.getElementById("receipt-amount")
+    const receiptRecipient = document.getElementById("receipt-recipient")
+    const receiptAccount = document.getElementById("receipt-account")
+    const receiptDescription = document.getElementById("receipt-description")
+    const receiptDate = document.getElementById("receipt-date")
+    const receiptReference = document.getElementById("receipt-reference")
+
+    if (!receiptModal) {
+      console.error("Receipt modal element not found!")
+      return
+    }
+
+    // Fill in receipt details
+    if (receiptAmount) receiptAmount.textContent = formatCurrency(data.amount)
+    if (receiptRecipient) receiptRecipient.textContent = data.recipient
+    if (receiptAccount) receiptAccount.textContent = data.recipientAccount
+    if (receiptDescription) receiptDescription.textContent = data.description || "Transfer"
+    if (receiptDate) receiptDate.textContent = data.date
+    if (receiptReference) receiptReference.textContent = data.reference
+
+    // Show the modal
+    receiptModal.classList.add("active")
+    receiptModal.style.display = "flex"
+
+    // Add event listeners for receipt modal buttons
+    const closeReceiptBtn = document.getElementById("close-receipt-btn")
+    const shareReceiptBtn = document.getElementById("share-receipt-btn")
+    const closeModalBtn = receiptModal.querySelector(".close-modal")
+
+    // Close receipt button
+    if (closeReceiptBtn) {
+      closeReceiptBtn.onclick = () => {
+        receiptModal.classList.remove("active")
+        receiptModal.style.display = "none"
+      }
+    }
+
+    // Share receipt button
+    if (shareReceiptBtn) {
+      shareReceiptBtn.onclick = () => {
+        const receiptText = `
+M&T BANK TRANSFER RECEIPT
+------------------------
+✅ Transfer Successful
+Amount: ${formatCurrency(data.amount)}
+Recipient: ${data.recipient}
+Account: ${data.recipientAccount}
+Description: ${data.description || "Transfer"}
+Date: ${data.date}
+Reference: ${data.reference}
+------------------------
+Thank you for banking with M&T BANK!
+            `
+
+        if (navigator.share) {
+          navigator
+            .share({
+              title: "M&T BANK Transfer Receipt",
+              text: receiptText,
+            })
+            .catch(() => {
+              copyToClipboard(receiptText)
+            })
+        } else {
+          copyToClipboard(receiptText)
+        }
+      }
+    }
+
+    // Close modal X button
+    if (closeModalBtn) {
+      closeModalBtn.onclick = () => {
+        receiptModal.classList.remove("active")
+        receiptModal.style.display = "none"
+      }
+    }
+
+    // Close when clicking outside
+    receiptModal.onclick = (e) => {
+      if (e.target === receiptModal) {
+        receiptModal.classList.remove("active")
+        receiptModal.style.display = "none"
+      }
     }
   }
 
-  // Function to complete transfer after IMF verification
-  function completeTransfer() {
-    if (!pendingTransaction) return
+  // Update the IMF verification event listener to use the new function
+  if (confirmImfBtn) {
+    confirmImfBtn.addEventListener("click", () => {
+      const enteredCode = imfCodeInput.value.trim().toUpperCase()
 
-    const { recipient, amount, description, currentUser } = pendingTransaction
-
-    // Reload users data from server to ensure we have the latest data
-    fetch("/api/users")
-      .then((res) => res.json())
-      .catch(() => {
-        // If server fetch fails, use localStorage
-        const storedUsers = localStorage.getItem("users")
-        return storedUsers ? JSON.parse(storedUsers) : []
-      })
-      .then((latestUsers) => {
-        if (latestUsers && latestUsers.length > 0) {
-          users = latestUsers
+      if (enteredCode === "IMF CODE") {
+        // Process pending transfer immediately
+        if (pendingTransferData) {
+          executeTransfer(pendingTransferData)
+          hideImfModal()
+          // Clear pending data
+          pendingTransferData = null
         }
 
-        // Find recipient (by email or account number)
-        const recipientUser = users.find((u) => u.email === recipient || u.accountNumber === recipient)
-
-        if (!recipientUser) {
-          alert("Recipient not found")
-          pendingTransaction = null
-          return
+        // Process pending admin funding
+        if (pendingAdminFundData) {
+          executeAdminFunding(pendingAdminFundData)
+          hideImfModal()
+          // Clear pending data
+          pendingAdminFundData = null
         }
-
-        // Update balances
-        const currentUserIndex = users.findIndex((u) => u.id === currentUser.id)
-        const recipientIndex = users.findIndex((u) => u.id === recipientUser.id)
-
-        users[currentUserIndex].balance -= amount
-        users[recipientIndex].balance += amount
-
-        // Create transaction records
-        const timestamp = new Date().toISOString()
-        const transactionId = generateTransactionId()
-
-        // Debit transaction for sender
-        const debitTransaction = {
-          id: transactions.length + 1,
-          transactionId: transactionId,
-          from: currentUser.email,
-          fromAccount: currentUser.accountNumber,
-          fromName: currentUser.name,
-          to: recipientUser.email,
-          toAccount: recipientUser.accountNumber,
-          toName: recipientUser.name,
-          amount: amount,
-          type: "debit",
-          description: description,
-          timestamp: timestamp,
-          status: "completed",
-        }
-
-        // Credit transaction for recipient
-        const creditTransaction = {
-          id: transactions.length + 2,
-          transactionId: transactionId,
-          from: currentUser.email,
-          fromAccount: currentUser.accountNumber,
-          fromName: currentUser.name,
-          to: recipientUser.email,
-          toAccount: recipientUser.accountNumber,
-          toName: recipientUser.name,
-          amount: amount,
-          type: "credit",
-          description: description,
-          timestamp: timestamp,
-          status: "completed",
-        }
-
-        transactions.push(debitTransaction, creditTransaction)
-
-        // Update session storage
-        sessionStorage.setItem("currentUser", JSON.stringify(users[currentUserIndex]))
-
-        // Save data
-        saveData()
-
-        // Update UI
-        updateDashboard(users[currentUserIndex])
-
-        // Generate and show receipt
-        generateTransactionReceipt(debitTransaction)
-
-        // Reset form
-        if (pendingTransaction.recipientField) {
-          document.getElementById(pendingTransaction.recipientField).value = ""
-          document.getElementById(pendingTransaction.amountField).value = ""
-          document.getElementById(pendingTransaction.descriptionField).value = ""
-        }
-
-        // Clear pending transaction
-        pendingTransaction = null
-      })
-  }
-
-  // Function to generate transaction ID
-  function generateTransactionId() {
-    const timestamp = Date.now()
-    const random = Math.floor(Math.random() * 1000)
-    return `TXN${timestamp}${random}`
-  }
-
-  // Function to generate transaction receipt
-  function generateTransactionReceipt(transaction) {
-    const receiptContent = document.getElementById("receipt-content")
-    const currentDate = new Date(transaction.timestamp)
-
-    receiptContent.innerHTML = `
-      <div class="receipt-header">
-        <h2>M&T BANK</h2>
-        <p>Official Transaction Receipt</p>
-        <p>Date: ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}</p>
-      </div>
-      
-      <div class="receipt-details">
-        <div class="receipt-row">
-          <span class="receipt-label">Transaction ID:</span>
-          <span class="receipt-value">${transaction.transactionId}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">Transaction Type:</span>
-          <span class="receipt-value">Money Transfer</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">From Account:</span>
-          <span class="receipt-value">${transaction.fromAccount}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">From Name:</span>
-          <span class="receipt-value">${transaction.fromName}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">To Account:</span>
-          <span class="receipt-value">${transaction.toAccount}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">To Name:</span>
-          <span class="receipt-value">${transaction.toName}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">Description:</span>
-          <span class="receipt-value">${transaction.description}</span>
-        </div>
-        <div class="receipt-row">
-          <span class="receipt-label">Status:</span>
-          <span class="receipt-value">COMPLETED</span>
-        </div>
-      </div>
-      
-      <div class="receipt-amount">
-        <div class="amount">${formatCurrency(transaction.amount)}</div>
-      </div>
-      
-      <div class="receipt-footer">
-        <p>This is an official receipt from M&T Bank</p>
-        <p>Transaction processed securely</p>
-        <p>For inquiries, contact customer service</p>
-        <p>Thank you for banking with M&T Bank</p>
-      </div>
-    `
-
-    // Show receipt modal
-    document.getElementById("receipt-modal").classList.add("active")
-  }
-
-  // Password form
-  if (passwordForm) {
-    passwordForm.addEventListener("submit", (e) => {
-      e.preventDefault()
-      const currentPassword = document.getElementById("current-password").value
-      const newPassword = document.getElementById("new-password").value
-      const confirmPassword = document.getElementById("confirm-password").value
-
-      const currentUser = getCurrentUser()
-
-      if (!currentUser) {
-        alert("You must be logged in to change your password")
-        return
-      }
-
-      if (currentUser.password !== currentPassword) {
-        alert("Current password is incorrect")
-        return
-      }
-
-      if (newPassword !== confirmPassword) {
-        alert("New passwords do not match")
-        return
-      }
-
-      // Update password
-      const userIndex = users.findIndex((u) => u.id === currentUser.id)
-      users[userIndex].password = newPassword
-
-      // Update session storage
-      sessionStorage.setItem("currentUser", JSON.stringify(users[userIndex]))
-
-      // Save data
-      saveData()
-
-      alert("Password changed successfully")
-
-      // Reset form
-      passwordForm.reset()
-    })
-  }
-
-  // Support form
-  if (supportForm) {
-    supportForm.addEventListener("submit", (e) => {
-      e.preventDefault()
-      alert("Your message has been sent. Our support team will contact you soon.")
-      supportForm.reset()
-    })
-  }
-
-  // Loan calculator
-  if (calculateLoanBtn) {
-    calculateLoanBtn.addEventListener("click", () => {
-      const loanAmount = Number.parseFloat(document.getElementById("loan-amount").value)
-      const loanTerm = Number.parseFloat(document.getElementById("loan-term").value)
-      const interestRate = Number.parseFloat(document.getElementById("interest-rate").value) / 100
-
-      // Calculate monthly payment
-      const monthlyRate = interestRate / 12
-      const totalPayments = loanTerm * 12
-      const monthlyPayment = (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalPayments))
-      const totalPayment = monthlyPayment * totalPayments
-      const totalInterest = totalPayment - loanAmount
-
-      document.getElementById("monthly-payment").textContent = formatCurrency(monthlyPayment)
-      document.getElementById("total-payment").textContent = formatCurrency(totalPayment)
-      document.getElementById("total-interest").textContent = formatCurrency(totalInterest)
-    })
-  }
-
-  // Admin page navigation
-  function showAdminPage(pageId) {
-    adminPages.forEach((page) => {
-      page.classList.remove("active")
-    })
-    document.getElementById(pageId).classList.add("active")
-
-    // Update navigation
-    adminSidebarMenuItems.forEach((item) => {
-      if (item.getAttribute("data-admin-page") === pageId.replace("-page", "")) {
-        item.classList.add("active")
       } else {
-        item.classList.remove("active")
+        alert("Invalid IMF code. Please enter the correct code to proceed.")
+        imfCodeInput.focus()
       }
     })
-
-    // Close sidebar on mobile
-    if (window.innerWidth < 1024) {
-      adminSidebar.classList.remove("active")
-    }
   }
 
-  adminSidebarMenuItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      const pageId = "admin-" + item.getAttribute("data-admin-page") + "-page"
-      showAdminPage(pageId)
-    })
-  })
-
-  // Admin fund form
+  // Update admin fund form with IMF verification
   if (adminFundForm) {
     adminFundForm.addEventListener("submit", (e) => {
       e.preventDefault()
@@ -948,11 +883,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return
       }
 
-      // Find user to fund (by email or account number)
-      const userToFund = users.find((u) => u.email === userIdentifier || u.accountNumber === userIdentifier)
-
-      if (!userToFund) {
-        alert("User not found")
+      if (!userIdentifier || !amount || amount <= 0) {
+        alert("Please fill in all required fields with valid values")
         return
       }
 
@@ -961,60 +893,91 @@ document.addEventListener("DOMContentLoaded", () => {
         return
       }
 
-      // Update balances
-      const adminIndex = users.findIndex((u) => u.id === admin.id)
-      const userIndex = users.findIndex((u) => u.id === userToFund.id)
-
-      users[adminIndex].balance -= amount
-      users[userIndex].balance += amount
-
-      // Create transaction records
-      const timestamp = new Date().toISOString()
-
-      // Debit transaction for admin
-      const debitTransaction = {
-        id: transactions.length + 1,
-        from: admin.email,
-        fromAccount: admin.accountNumber,
-        to: userToFund.email,
-        toAccount: userToFund.accountNumber,
-        amount: amount,
-        type: "debit",
-        description: description,
-        timestamp: timestamp,
-        status: "completed",
+      // Store admin funding data for after IMF verification
+      pendingAdminFundData = {
+        userIdentifier,
+        amount,
+        description,
       }
 
-      // Credit transaction for user
-      const creditTransaction = {
-        id: transactions.length + 2,
-        from: admin.email,
-        fromAccount: admin.accountNumber,
-        to: userToFund.email,
-        toAccount: userToFund.accountNumber,
-        amount: amount,
-        type: "credit",
-        description: description,
-        timestamp: timestamp,
-        status: "completed",
-      }
-
-      transactions.push(debitTransaction, creditTransaction)
-
-      // Update session storage
-      sessionStorage.setItem("currentUser", JSON.stringify(users[adminIndex]))
-
-      // Save data
-      saveData()
-
-      // Update dashboard
-      updateAdminDashboard()
-
-      alert("User funded successfully")
-
-      // Reset form
-      adminFundForm.reset()
+      // Show IMF verification modal
+      showImfModal()
     })
+  }
+
+  // Execute admin funding after IMF verification
+  function executeAdminFunding(fundData) {
+    const { userIdentifier, amount, description } = fundData
+
+    // Get admin user
+    const admin = getCurrentUser()
+
+    // Find user to fund (by email or account number)
+    const userToFund = users.find((u) => u.email === userIdentifier || u.accountNumber === userIdentifier)
+
+    if (!userToFund) {
+      alert("User not found")
+      return
+    }
+
+    if (admin.balance < amount) {
+      alert("Insufficient admin funds")
+      return
+    }
+
+    // Update balances
+    const adminIndex = users.findIndex((u) => u.id === admin.id)
+    const userIndex = users.findIndex((u) => u.id === userToFund.id)
+
+    users[adminIndex].balance -= amount
+    users[userIndex].balance += amount
+
+    // Create transaction records
+    const timestamp = new Date().toISOString()
+
+    // Debit transaction for admin
+    const debitTransaction = {
+      id: transactions.length + 1,
+      from: admin.email,
+      fromAccount: admin.accountNumber,
+      to: userToFund.email,
+      toAccount: userToFund.accountNumber,
+      amount: amount,
+      type: "debit",
+      description: description,
+      timestamp: timestamp,
+      status: "completed",
+    }
+
+    // Credit transaction for user
+    const creditTransaction = {
+      id: transactions.length + 2,
+      from: admin.email,
+      fromAccount: admin.accountNumber,
+      to: userToFund.email,
+      toAccount: userToFund.accountNumber,
+      amount: amount,
+      type: "credit",
+      description: description,
+      timestamp: timestamp,
+      status: "completed",
+    }
+
+    transactions.push(debitTransaction, creditTransaction)
+
+    // Update session storage
+    sessionStorage.setItem("currentUser", JSON.stringify(users[adminIndex]))
+
+    // Save data
+    saveData()
+
+    // Update dashboard
+    updateAdminDashboard()
+
+    alert("User funded successfully")
+
+    // Reset form
+    adminFundForm.reset()
   }
 
   // Add user modal
@@ -1114,6 +1077,19 @@ document.addEventListener("DOMContentLoaded", () => {
       // Save data
       saveData()
 
+      // Show receipt modal with proper details
+      showReceiptModal({
+        recipient: name,
+        recipientAccount: accountNumber.toString(),
+        amount: balance,
+        description: "Initial funding",
+        date: new Date().toLocaleString(),
+        reference: "N/A",
+      })
+
+      // Reset form fields
+      addUserForm.reset()
+
       // Update dashboard
       updateAdminDashboard()
 
@@ -1121,9 +1097,6 @@ document.addEventListener("DOMContentLoaded", () => {
       addUserModal.classList.remove("active")
 
       alert("User added successfully")
-
-      // Reset form
-      addUserForm.reset()
     })
   }
 
@@ -1194,18 +1167,18 @@ document.addEventListener("DOMContentLoaded", () => {
       nonAdminUsers.slice(0, 5).forEach((user) => {
         const tr = document.createElement("tr")
         tr.innerHTML = `
-                    <td>${user.name}</td>
-                    <td>${user.email}</td>
-                    <td>${user.accountNumber}</td>
-                    <td>${formatCurrency(user.balance)}</td>
-                    <td><span class="status ${user.status}">${user.status}</span></td>
-                    <td>
-                        <div class="user-actions">
-                            <button class="action-btn fund-btn-small" data-email="${user.email}">Fund</button>
-                            <button class="action-btn view-btn" data-id="${user.id}">View</button>
-                        </div>
-                    </td>
-                `
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.accountNumber}</td>
+                <td>${formatCurrency(user.balance)}</td>
+                <td><span class="status ${user.status}">${user.status}</span></td>
+                <td>
+                    <div class="user-actions">
+                        <button class="action-btn fund-btn-small" data-email="${user.email}">Fund</button>
+                        <button class="action-btn view-btn" data-id="${user.id}">View</button>
+                    </div>
+                </td>
+            `
         recentUsersTable.appendChild(tr)
       })
 
@@ -1221,13 +1194,13 @@ document.addEventListener("DOMContentLoaded", () => {
       transactions.slice(0, 5).forEach((transaction) => {
         const tr = document.createElement("tr")
         tr.innerHTML = `
-                    <td>${formatDate(transaction.timestamp)}</td>
-                    <td>${transaction.from}</td>
-                    <td>${transaction.to}</td>
-                    <td>${formatCurrency(transaction.amount)}</td>
-                    <td>${transaction.type}</td>
-                    <td><span class="status ${transaction.status}">${transaction.status}</span></td>
-                `
+                <td>${formatDate(transaction.timestamp)}</td>
+                <td>${transaction.from}</td>
+                <td>${transaction.to}</td>
+                <td>${formatCurrency(transaction.amount)}</td>
+                <td>${transaction.type}</td>
+                <td><span class="status ${transaction.status}">${transaction.status}</span></td>
+            `
         recentTransactionsTable.appendChild(tr)
       })
     }
@@ -1240,20 +1213,20 @@ document.addEventListener("DOMContentLoaded", () => {
       nonAdminUsers.forEach((user) => {
         const tr = document.createElement("tr")
         tr.innerHTML = `
-                    <td>${user.name}</td>
-                    <td>${user.email}</td>
-                    <td>${user.accountNumber}</td>
-                    <td>${formatCurrency(user.balance)}</td>
-                    <td><span class="status ${user.status}">${user.status}</span></td>
-                    <td>
-                        <div class="user-actions">
-                            <button class="action-btn fund-btn-small" data-email="${user.email}">Fund</button>
-                            <button class="action-btn view-btn" data-id="${user.id}">View</button>
-                            <button class="action-btn edit-btn" data-id="${user.id}">Edit</button>
-                            <button class="action-btn delete-btn" data-id="${user.id}">Delete</button>
-                        </div>
-                    </td>
-                `
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.accountNumber}</td>
+                <td>${formatCurrency(user.balance)}</td>
+                <td><span class="status ${user.status}">${user.status}</span></td>
+                <td>
+                    <div class="user-actions">
+                        <button class="action-btn fund-btn-small" data-email="${user.email}">Fund</button>
+                        <button class="action-btn view-btn" data-id="${user.id}">View</button>
+                        <button class="action-btn edit-btn" data-id="${user.id}">Edit</button>
+                        <button class="action-btn delete-btn" data-id="${user.id}">Delete</button>
+                    </div>
+                </td>
+            `
         usersTableBody.appendChild(tr)
       })
 
@@ -1269,12 +1242,12 @@ document.addEventListener("DOMContentLoaded", () => {
       adminFunding.slice(0, 5).forEach((transaction) => {
         const tr = document.createElement("tr")
         tr.innerHTML = `
-                    <td>${formatDate(transaction.timestamp)}</td>
-                    <td>${transaction.to}</td>
-                    <td>${formatCurrency(transaction.amount)}</td>
-                    <td>${transaction.description}</td>
-                    <td><span class="status ${transaction.status}">${transaction.status}</span></td>
-                `
+                <td>${formatDate(transaction.timestamp)}</td>
+                <td>${transaction.to}</td>
+                <td>${formatCurrency(transaction.amount)}</td>
+                <td>${transaction.description}</td>
+                <td><span class="status ${transaction.status}">${transaction.status}</span></td>
+            `
         fundingTransactionsTable.appendChild(tr)
       })
     }
@@ -1287,14 +1260,14 @@ document.addEventListener("DOMContentLoaded", () => {
       transactions.forEach((transaction) => {
         const tr = document.createElement("tr")
         tr.innerHTML = `
-                    <td>${formatDate(transaction.timestamp)}</td>
-                    <td>${transaction.from}</td>
-                    <td>${transaction.to}</td>
-                    <td>${formatCurrency(transaction.amount)}</td>
-                    <td>${transaction.type}</td>
-                    <td>${transaction.description}</td>
-                    <td><span class="status ${transaction.status}">${transaction.status}</span></td>
-                `
+                <td>${formatDate(transaction.timestamp)}</td>
+                <td>${transaction.from}</td>
+                <td>${transaction.to}</td>
+                <td>${formatCurrency(transaction.amount)}</td>
+                <td>${transaction.type}</td>
+                <td>${transaction.description}</td>
+                <td><span class="status ${transaction.status}">${transaction.status}</span></td>
+            `
         transactionsTableBody.appendChild(tr)
       })
     }
@@ -1407,17 +1380,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const div = document.createElement("div")
         div.className = "transaction-item"
         div.innerHTML = `
-                    <div class="transaction-info">
-                        <div class="transaction-icon">
-                            <i class="fas fa-history"></i>
-                        </div>
-                        <div class="transaction-details">
-                            <h4>${transaction.from === "admin@safenest.com" ? "Admin" : transaction.from}</h4>
-                            <span class="transaction-status credited">Credited</span>
-                        </div>
+                <div class="transaction-info">
+                    <div class="transaction-icon">
+                        <i class="fas fa-history"></i>
                     </div>
-                    <div class="transaction-amount credit">${formatCurrency(transaction.amount)}</div>
-                `
+                    <div class="transaction-details">
+                        <h4>${transaction.from === "admin@safenest.com" ? "Admin" : transaction.from}</h4>
+                        <span class="transaction-status credited">Credited</span>
+                    </div>
+                </div>
+                <div class="transaction-amount credit">${formatCurrency(transaction.amount)}</div>
+            `
         creditTransactions.appendChild(div)
       })
     }
@@ -1430,17 +1403,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const div = document.createElement("div")
         div.className = "transaction-item"
         div.innerHTML = `
-                    <div class="transaction-info">
-                        <div class="transaction-icon">
-                            <i class="fas fa-history"></i>
-                        </div>
-                        <div class="transaction-details">
-                            <h4>${transaction.to}</h4>
-                            <span class="transaction-status processing">Processing</span>
-                        </div>
+                <div class="transaction-info">
+                    <div class="transaction-icon">
+                        <i class="fas fa-history"></i>
                     </div>
-                    <div class="transaction-amount debit">-${formatCurrency(transaction.amount)}</div>
-                `
+                    <div class="transaction-details">
+                        <h4>${transaction.to}</h4>
+                        <span class="transaction-status processing">Processing</span>
+                    </div>
+                </div>
+                <div class="transaction-amount debit">-${formatCurrency(transaction.amount)}</div>
+            `
         debitTransactions.appendChild(div)
       })
     }
@@ -1476,12 +1449,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const tr = document.createElement("tr")
       tr.innerHTML = `
-                <td>${formatDate(transaction.timestamp)}</td>
-                <td>${transaction.description}</td>
-                <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
-                <td>${isCredit ? "Credit" : "Debit"}</td>
-                <td>${formatCurrency(balance)}</td>
-            `
+            <td>${formatDate(transaction.timestamp)}</td>
+            <td>${transaction.description}</td>
+            <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
+            <td>${isCredit ? "Credit" : "Debit"}</td>
+            <td>${formatCurrency(balance)}</td>
+        `
       statementTableBody.appendChild(tr)
     })
   }
@@ -1505,12 +1478,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const tr = document.createElement("tr")
       tr.innerHTML = `
-                <td>${formatDate(transaction.timestamp)}</td>
-                <td>${transaction.description}</td>
-                <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
-                <td>${isCredit ? "Credit" : "Debit"}</td>
-                <td><span class="status ${transaction.status}">${transaction.status}</span></td>
-            `
+            <td>${formatDate(transaction.timestamp)}</td>
+            <td>${transaction.description}</td>
+            <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
+            <td>${isCredit ? "Credit" : "Debit"}</td>
+            <td><span class="status ${transaction.status}">${transaction.status}</span></td>
+        `
       historyTableBody.appendChild(tr)
     })
   }
@@ -1534,16 +1507,64 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentUser = getCurrentUser()
 
     if (currentUser) {
-      loginContainer.style.display = "none"
+      // User is logged in, hide login/register and show dashboard
+      if (loginContainer) loginContainer.style.display = "none"
+      if (registerContainer) registerContainer.style.display = "none"
 
       if (currentUser.isAdmin) {
-        adminDashboard.style.display = "flex"
-        updateAdminDashboard()
+        if (adminDashboard) {
+          adminDashboard.style.display = "flex"
+          updateAdminDashboard()
+        }
+        if (dashboardContainer) dashboardContainer.style.display = "none"
       } else {
-        dashboardContainer.style.display = "flex"
-        updateDashboard(currentUser)
+        if (dashboardContainer) {
+          dashboardContainer.style.display = "flex"
+          updateDashboard(currentUser)
+        }
+        if (adminDashboard) adminDashboard.style.display = "none"
       }
+    } else {
+      // No user logged in, show login container
+      if (loginContainer) loginContainer.style.display = "flex"
+      if (registerContainer) registerContainer.style.display = "none"
+      if (dashboardContainer) dashboardContainer.style.display = "none"
+      if (adminDashboard) adminDashboard.style.display = "none"
     }
+  }
+
+  // Initialize the application
+  function initializeApp() {
+    // Ensure only dashboard page is visible initially for user
+    const userPages = document.querySelectorAll(".page")
+    userPages.forEach((page) => {
+      page.classList.remove("active")
+    })
+
+    const dashboardPage = document.getElementById("dashboard-page")
+    if (dashboardPage) {
+      dashboardPage.classList.add("active")
+    }
+
+    // Ensure only dashboard page is visible initially for admin
+    const adminPagesElements = document.querySelectorAll(".admin-page")
+    adminPagesElements.forEach((page) => {
+      page.classList.remove("active")
+    })
+    const adminDashboardPage = document.getElementById("admin-dashboard-page")
+    if (adminDashboardPage) {
+      adminDashboardPage.classList.add("active")
+    }
+
+    // Load data first, then check login status
+    fetchData()
+      .then(() => {
+        checkLoggedInUser()
+      })
+      .catch(() => {
+        // If fetchData fails, still check login status
+        checkLoggedInUser()
+      })
   }
 
   // Action buttons
@@ -1902,12 +1923,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const tr = document.createElement("tr")
       tr.innerHTML = `
-        <td>${formatDate(transaction.timestamp)}</td>
-        <td>${transaction.description}</td>
-        <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
-        <td>${isCredit ? "Credit" : "Debit"}</td>
-        <td><span class="status ${transaction.status}">${transaction.status}</span></td>
-      `
+      <td>${formatDate(transaction.timestamp)}</td>
+      <td>${transaction.description}</td>
+      <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
+      <td>${isCredit ? "Credit" : "Debit"}</td>
+      <td><span class="status ${transaction.status}">${transaction.status}</span></td>
+    `
 
       historyTableBody.appendChild(tr)
     })
@@ -1990,12 +2011,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const tr = document.createElement("tr")
       tr.innerHTML = `
-        <td>${formatDate(transaction.timestamp)}</td>
-        <td>${transaction.description}</td>
-        <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
-        <td>${isCredit ? "Credit" : "Debit"}</td>
-        <td><span class="status ${transaction.status}">${transaction.status}</span></td>
-      `
+      <td>${formatDate(transaction.timestamp)}</td>
+      <td>${transaction.description}</td>
+      <td>${isCredit ? formatCurrency(transaction.amount) : "-" + formatCurrency(transaction.amount)}</td>
+      <td>${isCredit ? "Credit" : "Debit"}</td>
+      <td><span class="status ${transaction.status}">${transaction.status}</span></td>
+    `
 
       historyTableBody.appendChild(tr)
     })
@@ -2028,6 +2049,95 @@ document.addEventListener("DOMContentLoaded", () => {
       comingSoonModal.classList.remove("active")
     }
   })
+
+  // Receipt modal function
+  function showReceiptModal(data) {
+    const receiptModal = document.getElementById("receipt-modal")
+    const receiptAmount = document.getElementById("receipt-amount")
+    const receiptRecipient = document.getElementById("receipt-recipient")
+    const receiptAccount = document.getElementById("receipt-account")
+    const receiptDescription = document.getElementById("receipt-description")
+    const receiptDate = document.getElementById("receipt-date")
+    const receiptReference = document.getElementById("receipt-reference")
+
+    if (!receiptModal) {
+      console.error("Receipt modal element not found!")
+      return
+    }
+
+    // Fill in receipt details
+    if (receiptAmount) receiptAmount.textContent = formatCurrency(data.amount)
+    if (receiptRecipient) receiptRecipient.textContent = data.recipient
+    if (receiptAccount) receiptAccount.textContent = data.recipientAccount
+    if (receiptDescription) receiptDescription.textContent = data.description || "Transfer"
+    if (receiptDate) receiptDate.textContent = data.date
+    if (receiptReference) receiptReference.textContent = data.reference
+
+    // Show the modal
+    receiptModal.classList.add("active")
+    receiptModal.style.display = "flex"
+
+    // Add event listeners for receipt modal buttons
+    const closeReceiptBtn = document.getElementById("close-receipt-btn")
+    const shareReceiptBtn = document.getElementById("share-receipt-btn")
+    const closeModalBtn = receiptModal.querySelector(".close-modal")
+
+    // Close receipt button
+    if (closeReceiptBtn) {
+      closeReceiptBtn.onclick = () => {
+        receiptModal.classList.remove("active")
+        receiptModal.style.display = "none"
+      }
+    }
+
+    // Share receipt button
+    if (shareReceiptBtn) {
+      shareReceiptBtn.onclick = () => {
+        const receiptText = `
+M&T BANK TRANSFER RECEIPT
+------------------------
+✅ Transfer Successful
+Amount: ${formatCurrency(data.amount)}
+Recipient: ${data.recipient}
+Account: ${data.recipientAccount}
+Description: ${data.description || "Transfer"}
+Date: ${data.date}
+Reference: ${data.reference}
+------------------------
+Thank you for banking with M&T BANK!
+      `
+
+        if (navigator.share) {
+          navigator
+            .share({
+              title: "M&T BANK Transfer Receipt",
+              text: receiptText,
+            })
+            .catch(() => {
+              copyToClipboard(receiptText)
+            })
+        } else {
+          copyToClipboard(receiptText)
+        }
+      }
+    }
+
+    // Close modal X button
+    if (closeModalBtn) {
+      closeModalBtn.onclick = () => {
+        receiptModal.classList.remove("active")
+        receiptModal.style.display = "none"
+      }
+    }
+
+    // Close when clicking outside
+    receiptModal.onclick = (e) => {
+      if (e.target === receiptModal) {
+        receiptModal.classList.remove("active")
+        receiptModal.style.display = "none"
+      }
+    }
+  }
 
   // Override the updateDashboard function to include our new updates
   const originalUpdateDashboard = updateDashboard
@@ -2082,340 +2192,48 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   }
 
-  // Format currency helper function
-
-  // Format date helper function
-})
-
-// Add event listeners for transaction code modal
-document.addEventListener("DOMContentLoaded", () => {
-  // Transaction code modal elements
-  const transactionCodeModal = document.getElementById("transaction-code-modal")
-  const verifyTransactionCodeBtn = document.getElementById("verify-transaction-code")
-  const cancelTransactionCodeBtn = document.getElementById("cancel-transaction-code")
-  const userTransactionCodeInput = document.getElementById("user-transaction-code")
-
-  // Admin security page elements
-  const transactionCodeToggle = document.getElementById("transaction-code-toggle")
-  const transactionCodeSettings = document.getElementById("transaction-code-settings")
-  const transactionCodeInput = document.getElementById("transaction-code")
-  const confirmTransactionCodeInput = document.getElementById("confirm-transaction-code")
-  const saveTransactionCodeBtn = document.getElementById("save-transaction-code")
-  const resetTransactionCodeBtn = document.getElementById("reset-transaction-code")
-  const codeStatusElement = document.getElementById("code-status")
-
-  // Initialize admin security page
-  if (transactionCodeToggle) {
-    transactionCodeToggle.addEventListener("change", () => {
-      transactionCodeRequired = transactionCodeToggle.checked
-
-      if (transactionCodeRequired) {
-        transactionCodeSettings.style.display = "block"
-        codeStatusElement.textContent = "Enabled"
-        codeStatusElement.className = "status active"
-        resetTransactionCodeBtn.style.display = "inline-block"
-      } else {
-        transactionCodeSettings.style.display = "none"
-        codeStatusElement.textContent = "Disabled"
-        codeStatusElement.className = "status inactive"
-        resetTransactionCodeBtn.style.display = "none"
-
-        // Save settings
-        saveSettings()
-      }
-    })
-  }
-
-  // Save transaction code button event
-  if (saveTransactionCodeBtn) {
-    saveTransactionCodeBtn.addEventListener("click", () => {
-      const code = transactionCodeInput.value
-      const confirmCode = confirmTransactionCodeInput.value
-
-      if (!code) {
-        alert("Please enter a transaction code")
-        return
-      }
-
-      if (code.length < 4) {
-        alert("Transaction code must be at least 4 digits")
-        return
-      }
-
-      if (code !== confirmCode) {
-        alert("Transaction codes do not match")
-        return
-      }
-
-      // Save transaction code
-      transactionCodeValue = code
-      transactionCodeRequired = true
-
-      // Update UI
-      codeStatusElement.textContent = "Enabled"
-      codeStatusElement.className = "status active"
-      resetTransactionCodeBtn.style.display = "inline-block"
-
-      // Clear inputs
-      transactionCodeInput.value = ""
-      confirmTransactionCodeInput.value = ""
-
-      // Save settings
-      saveSettings()
-
-      alert("Transaction code has been set successfully")
-    })
-  }
-
-  // Reset transaction code button event
-  if (resetTransactionCodeBtn) {
-    resetTransactionCodeBtn.addEventListener("click", () => {
-      if (confirm("Are you sure you want to reset the transaction code?")) {
-        transactionCodeValue = ""
-        transactionCodeInput.value = ""
-        confirmTransactionCodeInput.value = ""
-
-        // Save settings
-        saveSettings()
-
-        alert("Transaction code has been reset")
-      }
-    })
-  }
-
-  // Verify transaction code button event
-  if (verifyTransactionCodeBtn) {
-    verifyTransactionCodeBtn.addEventListener("click", () => {
-      const enteredCode = userTransactionCodeInput.value
-
-      if (!enteredCode) {
-        alert("Please enter the transaction code")
-        return
-      }
-
-      if (enteredCode === transactionCodeValue) {
-        // Close modal
-        transactionCodeModal.classList.remove("active")
-
-        // Complete the transfer
-        completeTransfer()
-      } else {
-        alert("Invalid transaction code")
-      }
-    })
-  }
-
-  // Cancel transaction code button event
-  if (cancelTransactionCodeBtn) {
-    cancelTransactionCodeBtn.addEventListener("click", () => {
-      // Close modal
-      transactionCodeModal.classList.remove("active")
-
-      // Clear pending transaction
-      pendingTransaction = null
-    })
-  }
-
-  // Close modal when clicking outside
-  window.addEventListener("click", (e) => {
-    if (e.target === transactionCodeModal) {
-      transactionCodeModal.classList.remove("active")
-      pendingTransaction = null
-    }
-  })
-})
-
-// Add event listeners for IMF modal
-document.addEventListener("DOMContentLoaded", () => {
-  // IMF modal event listeners
-  const imfConfirmBtn = document.getElementById("imf-confirm-btn")
-  const imfBackBtn = document.getElementById("imf-back-btn")
-  const imfModal = document.getElementById("imf-modal")
-  const imfInput = document.getElementById("imf-code-input")
-
-  if (imfConfirmBtn) {
-    imfConfirmBtn.addEventListener("click", verifyIMFCode)
-  }
-
-  if (imfBackBtn) {
-    imfBackBtn.addEventListener("click", (e) => {
-      e.preventDefault()
-      hideIMFModal()
-    })
-  }
-
-  if (imfInput) {
-    imfInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        verifyIMFCode()
-      }
-    })
-  }
-
-  // Close IMF modal when clicking outside
-  if (imfModal) {
-    imfModal.addEventListener("click", (e) => {
-      if (e.target === imfModal) {
-        hideIMFModal()
-      }
-    })
-  }
-
-  // Receipt modal event listeners
-  const closeReceiptBtn = document.getElementById("close-receipt")
-  const downloadReceiptBtn = document.getElementById("download-receipt")
-  const printReceiptBtn = document.getElementById("print-receipt")
-  const receiptModal = document.getElementById("receipt-modal")
-
-  if (closeReceiptBtn) {
-    closeReceiptBtn.addEventListener("click", () => {
-      receiptModal.classList.remove("active")
-    })
-  }
-
-  if (downloadReceiptBtn) {
-    downloadReceiptBtn.addEventListener("click", () => {
-      // In a real application, you would generate a PDF here
-      alert("Receipt download feature will be implemented with PDF generation")
-    })
-  }
-
-  if (printReceiptBtn) {
-    printReceiptBtn.addEventListener("click", () => {
-      const receiptContent = document.getElementById("receipt-content").innerHTML
-      const printWindow = window.open("", "_blank")
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Transaction Receipt</title>
-            <style>
-              body { font-family: 'Courier New', monospace; padding: 20px; }
-              .receipt-header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 20px; margin-bottom: 20px; }
-              .receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ddd; }
-              .receipt-amount { background-color: #f0f9ff; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; }
-              .amount { font-size: 28px; font-weight: bold; color: #1e3a8a; }
-              .receipt-footer { text-align: center; border-top: 2px solid #1e3a8a; padding-top: 20px; margin-top: 20px; }
-            </style>
-          </head>
-          <body>${receiptContent}</body>
-        </html>
-      `)
-      printWindow.document.close()
-      printWindow.print()
-    })
-  }
-
-  // Close receipt modal when clicking outside
-  if (receiptModal) {
-    receiptModal.addEventListener("click", (e) => {
-      if (e.target === receiptModal) {
-        receiptModal.classList.remove("active")
-      }
-    })
-  }
-})
-
-// Console log for easy IMF code management
-console.log(`Current IMF Code: ${IMF_CODE}`)
-console.log("To change the IMF code, use: updateIMFCode('NEW_CODE')")
-
-// Declare variables
-const pages = document.querySelectorAll(".page")
-const sidebarMenuItems = document.querySelectorAll(".sidebar-menu-item")
-const navItems = document.querySelectorAll(".nav-item")
-const sidebar = document.getElementById("sidebar")
-const adminPages = document.querySelectorAll(".admin-page")
-const adminSidebarMenuItems = document.querySelectorAll(".admin-sidebar-menu-item")
-const adminSidebar = document.getElementById("admin-sidebar")
-
-// Modify the page navigation function to ensure only one page is shown at a time
-function showPage(pageId) {
-  // Hide all pages first
-  pages.forEach((page) => {
-    page.classList.remove("active")
-  })
-
-  // Show the selected page
-  const selectedPage = document.getElementById(pageId)
-  if (selectedPage) {
-    selectedPage.classList.add("active")
-  }
-
-  // Update sidebar menu items
-  sidebarMenuItems.forEach((item) => {
-    if (item.getAttribute("data-page") === pageId.replace("-page", "")) {
-      item.classList.add("active")
-    } else {
-      item.classList.remove("active")
-    }
-  })
-
-  // Update bottom navigation
-  navItems.forEach((item) => {
-    if (item.getAttribute("data-page") === pageId.replace("-page", "")) {
-      item.classList.add("active")
-    } else {
-      item.classList.remove("active")
-    }
-  })
-
-  // Close sidebar on mobile
-  if (window.innerWidth < 1024) {
-    sidebar.classList.remove("active")
-  }
-}
-
-// Modify the admin page navigation function to ensure only one page is shown at a time
-function showAdminPage(pageId) {
-  // Hide all admin pages first
-  adminPages.forEach((page) => {
-    page.classList.remove("active")
-  })
-
-  // Show the selected admin page
-  const selectedPage = document.getElementById(pageId)
-  if (selectedPage) {
-    selectedPage.classList.add("active")
-  }
-
-  // Update admin sidebar menu items
-  adminSidebarMenuItems.forEach((item) => {
-    if (item.getAttribute("data-admin-page") === pageId.replace("admin-", "").replace("-page", "")) {
-      item.classList.add("active")
-    } else {
-      item.classList.remove("active")
-    }
-  })
-
-  // Close sidebar on mobile
-  if (window.innerWidth < 1024) {
-    adminSidebar.classList.remove("active")
-  }
-}
-
-// Make sure only one page is active when the app loads
-document.addEventListener("DOMContentLoaded", () => {
-  // Ensure only dashboard page is visible initially for user
-  const userPages = document.querySelectorAll(".page")
-  userPages.forEach((page) => {
-    page.classList.remove("active")
-  })
-  const dashboardPage = document.getElementById("dashboard-page")
-  if (dashboardPage) {
-    dashboardPage.classList.add("active")
-  }
-
-  // Ensure only dashboard page is visible initially for admin
-  const adminPages = document.querySelectorAll(".admin-page")
-  adminPages.forEach((page) => {
-    page.classList.remove("active")
-  })
-  const adminDashboardPage = document.getElementById("admin-dashboard-page")
-  if (adminDashboardPage) {
-    adminDashboardPage.classList.add("active")
-  }
-
   // Load data and check if user is logged in
-  fetchData()
-  checkLoggedInUser()
+  initializeApp()
 })
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert("Receipt copied to clipboard!")
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err)
+        alert("Failed to copy receipt to clipboard. Please try again.")
+      })
+  } else {
+    const textArea = document.createElement("textarea")
+    textArea.value = text
+    textArea.style.position = "fixed"
+    textArea.style.top = 0
+    textArea.style.left = 0
+    textArea.style.width = "2em"
+    textArea.style.height = "2em"
+    textArea.style.padding = 0
+    textArea.style.border = "none"
+    textArea.style.outline = "none"
+    textArea.style.boxShadow = "none"
+    textArea.style.background = "transparent"
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+
+    try {
+      const successful = document.execCommand("copy")
+      const msg = successful ? "successful" : "unsuccessful"
+      console.log("Fallback: Copying text command was " + msg)
+      alert("Receipt copied to clipboard!")
+    } catch (err) {
+      console.error("Fallback: Oops, unable to copy", err)
+      alert("Failed to copy receipt to clipboard. Please try again.")
+    }
+
+    document.body.removeChild(textArea)
+  }
+}

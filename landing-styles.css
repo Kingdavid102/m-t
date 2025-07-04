@@ -1,7 +1,7 @@
 /* Base Styles */
 :root {
-  --primary-blue: #1e3a8a;
-  --secondary-blue: #1e40af;
+  --primary-blue: #2e86ab;
+  --secondary-blue: #a23b72;
   --accent-orange: #f18f01;
   --text-dark: #333333;
   --text-medium: #666666;
@@ -9,7 +9,7 @@
   --background-light: #f8f9fa;
   --border-color: #e0e0e0;
   --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  --gradient-primary: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  --gradient-primary: linear-gradient(135deg, #2e86ab 0%, #a23b72 100%);
   --gradient-orange: linear-gradient(135deg, #f18f01 0%, #c73e1d 100%);
 }
 
@@ -421,7 +421,7 @@ body {
 .banking-illustration {
   width: 100%;
   height: 300px;
-  background: url("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot_20250603-025720.jpg-bd6V64z2f7NdFfBtJSa10neVBhDZEt.jpeg")
+  background: url("https://i.ibb.co/8nMNB9dc/IMG-20250604-WA0113.jpg")
     center / contain no-repeat;
 }
 
@@ -811,103 +811,6 @@ body {
   color: var(--primary-blue);
 }
 
-/* Promotional Cards Section */
-.promo-cards-section {
-  padding: 60px 20px;
-  background-color: #f8f9fa;
-}
-
-.promo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.promo-card {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-  border-radius: 20px;
-  padding: 40px 30px;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 15px 40px rgba(30, 58, 138, 0.3);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.promo-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-.promo-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 25px 50px rgba(30, 58, 138, 0.4);
-}
-
-.promo-content {
-  flex: 1;
-  z-index: 2;
-  position: relative;
-}
-
-.promo-content h3 {
-  font-size: 36px;
-  font-weight: 900;
-  line-height: 1.1;
-  margin-bottom: 15px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.promo-content p {
-  font-size: 18px;
-  opacity: 0.95;
-  margin: 0;
-  font-weight: 500;
-}
-
-.promo-image {
-  width: 100px;
-  height: 100px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 25px;
-  backdrop-filter: blur(10px);
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  z-index: 2;
-  position: relative;
-}
-
-.promo-image img {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* If no image is available, show an icon */
-.promo-image:empty::before {
-  content: "🎉";
-  font-size: 45px;
-}
-
-.promo-card:nth-child(2) .promo-image:empty::before {
-  content: "🚀";
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-content {
@@ -965,48 +868,5 @@ body {
 
   .services-text h2 {
     font-size: 32px;
-  }
-}
-
-/* Responsive Design for Promo Cards */
-@media (max-width: 768px) {
-  .promo-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .promo-card {
-    flex-direction: column;
-    text-align: center;
-    padding: 30px 25px;
-  }
-
-  .promo-image {
-    margin-left: 0;
-    margin-top: 20px;
-    width: 80px;
-    height: 80px;
-  }
-
-  .promo-content h3 {
-    font-size: 28px;
-  }
-
-  .promo-content p {
-    font-size: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .promo-cards-section {
-    padding: 40px 15px;
-  }
-
-  .promo-card {
-    padding: 25px 20px;
-  }
-
-  .promo-content h3 {
-    font-size: 24px;
   }
 }
